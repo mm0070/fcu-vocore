@@ -16,7 +16,12 @@ const (
 	EndpointID = 0x2 // Endpoint address for data transfer
 )
 
-func SendToScreen(img []byte) {
+type VocoreScreen struct {
+	dev  *gousb.Device
+	intf *gousb.Interface
+}
+
+func InitializeScreen() (v *VocoreScreen, err error) {
 	// Initialize a new USB context
 	ctx := gousb.NewContext()
 	defer ctx.Close()
@@ -24,34 +29,51 @@ func SendToScreen(img []byte) {
 	// Open the USB device by its VendorID and ProductID
 	dev, err := ctx.OpenDeviceWithVIDPID(VendorID, ProductID)
 	if err != nil {
-		log.Fatalf("Could not open a device: %v", err)
+		log.Printf("Could not open a device: %v", err)
+		return
 	}
-	defer dev.Close()
 
 	// Claim an interface on the USB device
-	intf, done, err := dev.DefaultInterface()
+	intf, _, err := dev.DefaultInterface()
 	if err != nil {
-		log.Fatalf("Error claiming interface: %v", err)
+		log.Printf("Error claiming interface: %v", err)
+		return
 	}
-	defer done()
+	// TODO 2nd argument here is a done function, make sure to call this
 
 	// Wake up the screen
 	_, err = dev.Control(0x40, 0xB0, 0, 0, []byte{0x00, 0x29})
 	if err != nil {
-		log.Fatalf("Error waking up the screen: %v", err)
+		log.Printf("Error waking up the screen: %v", err)
+		return
 	}
 
+	v = &VocoreScreen{
+		dev:  dev,
+		intf: intf,
+	}
+
+	return
+}
+
+func (v *VocoreScreen) WriteToScreen(img []byte) (err error) {
 	// Call writeStart to prepare the screen for frame data
-	_, err = dev.Control(0x40, 0xB0, 0, 0, []byte{0x00, 0x2C, 0x00, 0xB8, 0x0B, 0x00})
+	_, err = v.dev.Control(0x40, 0xB0, 0, 0, []byte{0x00, 0x2C, 0x00, 0xB8, 0x0B, 0x00})
 	if err != nil {
-		log.Fatalf("Error in writeStart: %v", err)
+		log.Printf("Error in writeStart: %v", err)
+		return
 	}
 
 	// Send pixel data to the USB display using blit
-	err = blit(intf, img)
+	err = sendPixelData(v.intf, img)
 	if err != nil {
-		log.Fatalf("Error in blit: %v", err)
+		log.Printf("Error in sendPixelData: %v", err)
+		return
 	}
+	return
+}
 
-	log.Println("Pixel data sent successfully to the USB display!")
+func (v *VocoreScreen) Close() {
+	v.dev.Close()
+	v.intf.Close()
 }

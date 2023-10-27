@@ -15,7 +15,7 @@ func setFrame(intf *gousb.Interface, data []byte) error {
 	return err
 }
 
-func blit(intf *gousb.Interface, pixelData []byte) error {
+func sendPixelData(intf *gousb.Interface, pixelData []byte) error {
 	// Call setFrame to send pixel data to the USB display
 	err := setFrame(intf, pixelData)
 	return err

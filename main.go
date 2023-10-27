@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	// Serve display
+	// Serve display HTML
 	r := gin.Default()
 	r.LoadHTMLGlob("display/*.html")
 	r.GET("/", func(c *gin.Context) {
@@ -21,13 +21,30 @@ func main() {
 	go func() {
 		r.Run(":3000")
 	}()
-	start := time.Now()
-	// render it and generate bitmap
-	img := render.RenderBitmap("http://localhost:3000")
-	elapsed := time.Since(start)
-	log.Printf("Took %s", elapsed)
 
-	// send bitmap to vocore
-	vocore.SendToScreen(img)
+	// Set up display
+	display, err := vocore.InitializeScreen()
+	if err != nil {
+		log.Fatal("Failed to initialize screen: %v", err)
+	}
+	defer display.Close()
 
+	// Initialize chrome driver
+	driver, service, err := render.GetDriver()
+	if err != nil {
+		log.Fatal("Failed to initialize chrome driver: %v", err)
+	}
+	defer service.Stop()
+
+	for true {
+		frameRenderTimeStart := time.Now()
+		img, _ := render.RenderBitmap("http://localhost:3000", driver)
+		//TODO handle error
+
+		_ = display.WriteToScreen(img)
+		frameTime := time.Since(frameRenderTimeStart)
+		log.Printf("Screen write took: %s", frameTime)
+		fps := time.Second / frameTime
+		log.Printf("FPS: %v", fps)
+	}
 }

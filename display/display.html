@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hello, World!</title>
+    <title>Millisecond Clock</title>
     <style>
         body {
             display: flex;
@@ -22,9 +22,22 @@
 </head>
 
 <body>
-    <div class="centered-text">
-        dupa666
+    <div class="centered-text" id="clock">
+        00:00:00 <span id="milliseconds">000</span>
     </div>
+
+    <script>
+        function updateClock() {
+            var now = new Date();
+            var hours = String(now.getHours()).padStart(2, '0');
+            var minutes = String(now.getMinutes()).padStart(2, '0');
+            var seconds = String(now.getSeconds()).padStart(2, '0');
+            var milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+            document.getElementById('clock').textContent = hours + ':' + minutes + ':' + seconds + ':' + milliseconds;
+        }
+
+        setInterval(updateClock, 1); // Update every millisecond
+    </script>
 </body>
 
 </html>

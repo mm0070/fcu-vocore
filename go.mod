@@ -7,7 +7,7 @@ require (
 	github.com/bunsenapp/go-selenium v0.1.0 // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
-	github.com/chromedp/cdproto v0.0.0-20231011050154-1d073bb38998 // indirect
+	github.com/chromedp/cdproto v0.0.0-20231025043423-5615e204d422 // indirect
 	github.com/chromedp/chromedp v0.9.3 // indirect
 	github.com/chromedp/sysutil v1.0.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
@@ -37,7 +37,7 @@ require (
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.9.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
