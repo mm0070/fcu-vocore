@@ -1,11 +1,19 @@
 package render
 
 import (
+	"bytes"
 	"encoding/binary"
 	"image"
+	_ "image/png" // Import the PNG package to decode PNG images
+	"log"
 )
 
-func convertToRGB565(img image.Image) []byte {
+func ConvertToRGB565(bitmapData []byte) []byte {
+	img, _, err := image.Decode(bytes.NewReader(bitmapData))
+	if err != nil {
+		log.Fatalf("Failed to decode image: %v", err)
+	}
+
 	width := img.Bounds().Dy()  // Swap width and height
 	height := img.Bounds().Dx() // Swap width and height
 

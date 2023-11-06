@@ -2,49 +2,95 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/mm0070/fcu-vocore/render"
 	"github.com/mm0070/fcu-vocore/vocore"
 )
 
 func main() {
-	// Serve display HTML
-	r := gin.Default()
-	r.LoadHTMLGlob("display/*.html")
-	r.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "display.html", nil)
-	})
-
-	go func() {
-		r.Run(":3000")
-	}()
-
-	// Set up display
 	display, err := vocore.InitializeScreen()
 	if err != nil {
-		log.Fatal("Failed to initialize screen: %v", err)
+		log.Fatalf("Failed to initialize screen: %v", err)
 	}
 	defer display.Close()
 
-	// Initialize chrome driver
-	driver, service, err := render.GetDriver()
+	driver, service, err := render.GetChromeDriver()
 	if err != nil {
-		log.Fatal("Failed to initialize chrome driver: %v", err)
+		log.Fatalf("Failed to initialize chrome driver: %v", err)
 	}
 	defer service.Stop()
 
-	for true {
-		frameRenderTimeStart := time.Now()
-		img, _ := render.RenderBitmap("http://localhost:3000", driver)
-		//TODO handle error
+	// Channels to pipeline the stages.
+	captureDone := make(chan []byte, 1) // Buffer for one screenshot.
+	convertDone := make(chan []byte, 1) // Buffer for one converted image.
 
-		_ = display.WriteToScreen(img)
-		frameTime := time.Since(frameRenderTimeStart)
-		log.Printf("Screen write took: %s", frameTime)
-		fps := time.Second / frameTime
-		log.Printf("FPS: %v", fps)
+	// Error channel to handle errors in goroutines.
+	errChan := make(chan error)
+
+	// Capture routine.
+	go func() {
+		for {
+			bitmapData, err := render.CaptureHTML("file:///C:/Display/display.html", driver)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			captureDone <- bitmapData
+		}
+	}()
+
+	// Convert routine.
+	go func() {
+		for {
+			select {
+			case bitmapData := <-captureDone:
+				img := render.ConvertToRGB565(bitmapData)
+				convertDone <- img
+			case err := <-errChan:
+				log.Printf("Error during capture: %v", err)
+				return
+			}
+		}
+	}()
+
+	// Write routine.
+	go func() {
+		var lastFrameTime time.Time
+		for {
+			select {
+			case img := <-convertDone:
+				start := time.Now()
+
+				err := display.WriteToScreen(img)
+				if err != nil {
+					errChan <- err
+					return
+				}
+
+				// Calculate write duration and FPS.
+				writeDuration := time.Since(start)
+				log.Printf("Write to screen took: %v ms", writeDuration.Milliseconds())
+
+				if !lastFrameTime.IsZero() {
+					elapsed := time.Since(lastFrameTime)
+					fps := float64(time.Second) / float64(elapsed)
+					log.Printf("FPS: %.2f", fps)
+				}
+				lastFrameTime = time.Now()
+			case err := <-errChan:
+				log.Printf("Error during conversion or write: %v", err)
+				return
+			}
+		}
+	}()
+
+	// Handle exit in main routine (e.g., on error or interrupt).
+	for {
+		select {
+		case err := <-errChan:
+			log.Printf("Exiting due to error: %v", err)
+			return
+		}
 	}
 }

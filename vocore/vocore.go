@@ -64,7 +64,7 @@ func (v *VocoreScreen) WriteToScreen(img []byte) (err error) {
 		return
 	}
 
-	// Send pixel data to the USB display using blit
+	// Send pixel data to the USB display
 	err = sendPixelData(v.intf, img)
 	if err != nil {
 		log.Printf("Error in sendPixelData: %v", err)
